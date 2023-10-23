@@ -3,6 +3,8 @@ import * as StompJs from "@stomp/stompjs";
 import { useParams } from 'react-router-dom';
 
 export default function Chat(props) {
+    const token = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiYXV0aCI6IlVTRVIiLCJleHAiOjMyNTA2MzU4NDAwLCJpYXQiOjE2OTgwNDc2Njl9.7YN9lWI72OsbN6snZXopTsiXWAdTBZzn6zRDk-_UA0Q";
+
     let [client, changeClient] = useState(null);
 
     const params = useParams();
@@ -23,18 +25,20 @@ export default function Chat(props) {
         }
     };
 
-    const callbackPub = function () {
+    const callbackPub = function (type) {
         if (chat === "") {
             return;
         }
     
         client.publish({
-        destination: "/pub/chat/message",
+            destination: "/pub/chat/message",
+            headers: {
+                Authorization: token
+            },
             body: JSON.stringify({
-                messageType: "TALK",
-                sender: "userId",
-                roomId: params.roomId,
-                message: chat,
+                "chat_type": type,
+                "chat_room_id": params.roomId,
+                "chat_message": chat,
             }),
         });
     
@@ -83,15 +87,40 @@ export default function Chat(props) {
             <br/>
             <br/>
 
-            {chatList.map((element, index) => (
-                <p key={index}>{element.message}</p>
-            ))}
+            {chatList.map((element, index) => {
+                if (element['chat_type'] == "TEXT") {
+                    return (
+                        <div key={index}>
+                            <p>작성 시간: {element['chat_created_at']}</p>
+                            <p>보낸이: {element['chat_sender_id']}</p>
+                            <p>{element['chat_message']}</p>
+                        </div>
+                    )
+                } else if (element['chat_type'] == "IMAGE") {
+                    return (
+                        <div key={index}>
+                            <p>작성 시간: {element['chat_created_at']}</p>
+                            <p>보낸이: {element['chat_sender_id']}</p>
+                            <img
+                                src={element['chat_message']} 
+                                width="200" height="200"
+                            />
+                        </div>
+                    )
+                }
+            })}
+
+            <br/>
+            <br/>
 
             <input type="text" onChange={handleChatInput}/>
             <p>{chat}</p>
 
-            <button onClick={callbackPub}>
-                전송
+            <button onClick={() => callbackPub("TEXT")}>
+                텍스트 전송
+            </button>
+            <button onClick={() => callbackPub("IMAGE")}>
+                이미지 전송
             </button>
         </div>
     );
